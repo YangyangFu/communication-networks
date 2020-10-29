@@ -18,6 +18,16 @@
     - [1.12 Transport](#112-transport)
 - [BACnet: The Global Standard for Building Automation and Control Networks](#bacnet-the-global-standard-for-building-automation-and-control-networks)
   - [Chapter 3: Fundamentals](#chapter-3-fundamentals)
+    - [3.2 Open System Interconnection (OSI) Basic Reference Model (BRM)](#32-open-system-interconnection-osi-basic-reference-model-brm)
+    - [3.3 BACnet Protocol Architecture](#33-bacnet-protocol-architecture)
+    - [3.4 BACnet Application Layer](#34-bacnet-application-layer)
+      - [3.4.1 BACnet Object Model](#341-bacnet-object-model)
+      - [3.4.2 BACnet Services](#342-bacnet-services)
+    - [3.5 BACnet Network Layer](#35-bacnet-network-layer)
+    - [3.6 Data Link Layer](#36-data-link-layer)
+    - [3.7 BACnet Encoding](#37-bacnet-encoding)
+    - [3.8 BACnet Procedures](#38-bacnet-procedures)
+    - [3.9 BACnet Network Security](#39-bacnet-network-security)
 
 
 # Learning Objective
@@ -214,9 +224,89 @@ This book is accessible at: https://ebookcentral.proquest.com/lib/tamucs/reader.
 
 ## Chapter 3: Fundamentals
 
+### 3.2 Open System Interconnection (OSI) Basic Reference Model (BRM)
+
 Seven-layer basic network model - basic reference model.
 
 Figure [4](#4-brm) is a virtual representation of BRM. The BRM divide up all of the various issues that are involved in enabling machine-to-machine data communication into seven discrete components or "layers". The set of layers is called a `protocol stack`, and the figure represents the protocol stacks implemented on two communicating computers.
 
 ![4-brm](figs/4-basic-reference-model.png)
 
+A phyiscal layer protocol should define things like cable, connectors, electrical/optical signaling (i.e., how a 0 or 1 is represented physically).
+The application layer provides access to the communication infrstructure by means of a corresponding `Application Prgram Interface (API)`. The details of the API vary from one programming language to another but allow a programmer to take advantage of whatever capabilities the underlying protocol stack provides. In the case of BACnet, the Application layer allows programs to communicate about building automation and control systems.
+
+***Questions***
+
+- is the data transmitted from application layer to physical layer? an exmples to see how these layers interact in reality?
+   
+![6-osi](figs/6-osi-explain.png)
+
+Each protocol in the stack adds length to the overall message that ultimately emerges on the communication medium. This additional length contains `protocol control information (PCI)` such as length information, error checking parameters, sequence numbers, and so on. As a message passes down the protocol stack, each layer adds its PCI to the message, in order to convey data to the remote peer layer.
+
+![5-brm](figs/5-brm-pci.png)
+
+### 3.3 BACnet Protocol Architecture
+
+BACnet makes use of the collaposed architecture to increase communication efficiency by reducing protocol overhead.
+BACnet Application and Network Layer protocols are common to all data links. The temptation to use different application messages based on the underlying transport mechanism, i.e., data link and physical media is avoided.
+
+![7-bacnet-layer](figs/7-bacnet-layers.png)
+
+### 3.4 BACnet Application Layer
+
+There are two main parts of BACnet application layer: BACnet Objects and BACnet services.
+
+#### 3.4.1 BACnet Object Model
+
+An “object” in BACnet is just a collection of information that relates to the functioning of a particular BACS device.
+The collection of information is a set of properties. Each property has an `identifier`, a `data type` (e.g., analog, binary, text, or whatever) and a `conformance code` that indicates whether it is required to be present or optional and whether it is read-only or can be written to, i.e., modified, by BACnet services. All object types are required to have Object_Identifier, Object_Name, and Object_Type properties. All standard object types also have a Profile_Name property. BACnet-2012 now defines 54 object types.
+
+![8-object](figs/8-bacnet-object.png)
+
+A BACnet device is just a collection of BACnet objects and must contain the one required object, the `Device` object. The properties of the Device object are an eclectic assortment of all sorts of things that describe the device— and may not fit any place else. Such properties include Vendor_Name, Firmware_Revision, Location, Description, Protocol_Object_Types_Supported, and Protocol_Services_Supported as well as things like Local_Time, Local_Date, Daylight_Savings_Status, Segmentation_Supported, and so on.
+
+#### 3.4.2 BACnet Services
+BACnet Service is to address what BACnet devices would want to say to each other and how they would want to say it.
+A `client-server` model is used, where the client device sends a `service request` to the server device and the server responds with a `service response`.
+
+![9](figs/9-client-server.png)
+
+`PDU` stands for protocol data unit and is the encoded message that is generated by the BACnet protocol stack. Interactions that follow this model in BACnet are called “confirmed services” because the service request is always answered with some form of acknowledgment or `ACK`. If the ACK simply says “I got your message and performed the service you requested,” it is referred to as a “simple ACK.” If the ACK contains additional data, it is called a “complex ACK.” There is also the concept of “unconfirmed services” that are sent out without expecting any reply. While such services may be sent to a specific recipient, they are often broadcast to whatever devices are in the particular broadcast domain of the message.
+
+![10](figs/10-bacnet-services.png)
+
+
+### 3.5 BACnet Network Layer
+As indicated in Figure 3.3, BACnet specifies the use of seven data link technologies, each with different characteristics. With the exception of the `Point-To-Point` data link, which connects exactly two devices, each of the data links represent a technology capable of supporting multiple devices sharing a common medium. These are called `BACnet networks` and a collection of two or more such networks is called a `BACnet internetwork`.
+
+The purpose of the BACnet network layer is to provide the means by which messages can be relayed from one BACnet network to another, regardless of the BACnet data link technology in use on that network.
+
+`Whereas the data link technologies provide mechanisms with which devices communicate on a local network, the network layer facilitates communication between networks`. It also provides rules for distributing messages to groups of devices. Devices that interconnect two disparate BACnet networks, and provide the relay function just mentioned are called `BACnet Router`. `A BACnet Device is uniquely located by two parameters called a “BACnet Address” that consists of a network number and a medium access control (MAC) address.`
+
+![11](figs/11-bacnet-internetwork.png)
+
+Many BACnet internetworks would consist of only a small number of networks, such as pictured in Figure [11](#11). For this reason, we mandated that in a BACnet internetwork there would be `at most a single, active path between any two devices`. This constraint greatly simplifies the operation of the routers since there is only one way to get from a source device to a destination device.
+
+### 3.6 Data Link Layer
+
+ARCNET, Ethernet (expensive), Point-To-Point, Master-Slave/Token-Passing (MS/TP), ZigBee
+
+### 3.7 BACnet Encoding
+
+Encodings is needed because:
+
+- Symbolically represent the structure of the messages that would convey the application layer services
+- Convert the symbolic representation into 0s and 1s for transmission over the data links
+
+Represent Protocol Data Units (PDU) (e.g., APDU, NPDU etc) using data strctures.
+
+The data flow of a BACnet protocol architecture is summarized as in the following figure.
+
+![12](figs/12-bacnet-dataflow.png)
+
+
+
+### 3.8 BACnet Procedures
+There are three standardized “BACnet Procedures”: `Backup and Restore`, `Command Prioritization` and `Device Restart`. Each procedure uses a set of BACnet services and object properties to carry out a function that needs to be standardized in order for the function to be interoperable.
+
+### 3.9 BACnet Network Security
