@@ -28,6 +28,20 @@
     - [3.7 BACnet Encoding](#37-bacnet-encoding)
     - [3.8 BACnet Procedures](#38-bacnet-procedures)
     - [3.9 BACnet Network Security](#39-bacnet-network-security)
+    - [3.10 BACnet Web Services (BACnet/WS)](#310-bacnet-web-services-bacnetws)
+  - [Chapter 4 - BACnet Application Layers - Object](#chapter-4---bacnet-application-layers---object)
+    - [4.1 BACnet Object Model](#41-bacnet-object-model)
+    - [4.2 Properties](#42-properties)
+    - [4.3 Object Types](#43-object-types)
+      - [Analog Input](#analog-input)
+      - [Analog Output](#analog-output)
+      - [Analog Value](#analog-value)
+      - [Binary Input](#binary-input)
+      - [Binary Output](#binary-output)
+      - [Binary Value](#binary-value)
+      - [Loop](#loop)
+      - [Command](#command)
+      - [Load Control](#load-control)
 
 
 # Learning Objective
@@ -310,3 +324,195 @@ The data flow of a BACnet protocol architecture is summarized as in the followin
 There are three standardized “BACnet Procedures”: `Backup and Restore`, `Command Prioritization` and `Device Restart`. Each procedure uses a set of BACnet services and object properties to carry out a function that needs to be standardized in order for the function to be interoperable.
 
 ### 3.9 BACnet Network Security
+`replay attack`: the attacker send the same command at a later time, e.g., hack to open the door to let unarthroized people in.
+
+network layer message: 
+- Challenge Requst: used to confirm that a specific message was sent by a particular device. Used when there is some doubt about a message's origin.
+- Security-Payload
+- Security-Response
+- Request-Key-Update
+- Update-Key-Set
+- Update-Distribution-Key
+- Request-Master-Key
+- Set-Master-Key
+- What-Is-Network-Number
+- Network-Number-Is
+
+Five of the messages deal with processing the `keys` used for digital signature and encryption.
+
+In order to ensure that every device that participates in the BSA has a unique identity, a new requirement was introduced that all participating BACnet devices, including routers and BBMDs, must support the BACnet application layer. This means that every device (on a secure BACnet internetwork) must now have a `Device object` with an internetworkwide unique device instance number.
+
+The BSA also requires that all security-enabled devices have a `Network Security object`. The properties of this new object type include the key set used for digital signing of messages and encryption, where these are needed, and the various parameters needed to implement the BSA procedures.
+
+There are two types of networks: `trusted` and `non-trusted`. Trusted network is physically secure (e.g., in a locked mechanical room) or because of the use of protocol security, i.e., digital signatures and/or encrption. Non-trusted networks are those that are neither physically secure nor configured to use protocol security.
+
+`BACnet messages` containing no security information are referred to as `plain` messages.
+- Plain-Non-Trusted: such networks are not physically secure and no digital signature or encryption is used.
+- Plain-Trusted: such networks requre physical security; no protocol security is used. An example is a self-contained MS/TP network in a locked mechanical room.
+- Signed-Trusted: phsyical security is not required; messages are secured with signatures
+- Encrypted-Trusted: physical security is not reuqired; messages are secured with encryption.
+
+### 3.10 BACnet Web Services (BACnet/WS)
+
+## Chapter 4 - BACnet Application Layers - Object
+
+### 4.1 BACnet Object Model
+Objects solve the problem of representing the functions of a given BACnet device in a standard, network-visible way. Each object is a collection of related attributes that describe the function.
+
+`Object identifier` is used to distinguish different objects over the network.
+
+### 4.2 Properties
+
+Property:
+- property identifier: High_Limit, Present_Value, ...
+- property datatype: NULL, REAL, Unsigned, ...
+- conformance code (CC): R (`readable using BACnet services`), W (`readable + writable using BACnet services`), O (optional) 
+
+Note the inclusion of the constraint `using BACnet services`. A property may have a CC of R but its value may still be writable using a proprietary configuration tool or some other non-BACnet means.
+
+![13](figs/13-bacnet-object-property.png)
+
+***Questions***
+
+> If the `Present_Value` in an object is only `Readable`, how to launch a write attack?
+>> (1) maybe use other tools because `R` means readable by BACnet services.
+
+### 4.3 Object Types
+
+There are 54 object types defined in BACnet-2012.
+
+![14-1](figs/14-object-types-1.png)
+
+![14-2](figs/14-object-types-2.png)
+
+![14-3](figs/14-object-types-3.png)
+
+Each object type in Clause 12 begins with a description of the object type’s purpose followed by a table that lists each property and its attributes and, finally, a detailed description of each property.
+
+#### Analog Input
+`Purpose`: represents the `network-visible` characteristics of an analog input. 
+> `Network visible` can be understood as `part of network`. Analog inputs has to been digitized to be transmitted through networks.
+
+The AI object is one of the most prevalent of the basic device object types since it provides access to such common data as temperatures, pressures, flows, etc.
+
+Note that this object does not contain any properties that describe the internal processing necessary to get from a voltage, current or other physical quantity to the value as expressed using the specified engineering units. Such things as the analog-to-digital conversion process are intentionally a local matter.
+
+***Questions***
+- `Analog Input` here means the `digitized input`, transmitted from e.g., sensors?? if so, why not call it digital input???
+  
+
+**Properties**:
+
+1. Device_Type: is a CharacterString intended to provide a description of the physical device, i.e., sensor, connected to the analog input.
+
+2. Update_Interval: indicates the maximum interval between updates to the Present_Value property.
+
+3. Min_Pres_Value, Max_Pres_Value:
+
+4. Resolution: Is the smallest recognizable change, again in engineering units, that the Present_Value can take on.
+
+5. COV_Increment: Specifies the minimum change in Present_Value that will cause a COVNotification to be issued to a subscriber COV-client. `COV is referred as Change of Value service in BACnet.`
+
+6. ....
+
+
+#### Analog Output
+`Purpose`: represents the `externally visible` characteristics of an analog output. AOs typically control valves, dampers, variable speed drives, and other continuously variable equipment.
+> `externally visible` can be understood as `part of the external not network`. 
+
+The Present_Value is `commandable`. 
+`Command Prioritization` is one of the BACnet procedures, and the idea is that several processes may want to set the AO to a particular value but that there needs to be a way to `prioritize` which process “wins.” This is determined by the priority level assigned to the process. In BACnet, there are 16 priority levels with level 1 being the highest priority and 16 being the lowest. For now, suffice it to say that `command prioritization is accomplished by using a WriteProperty (or WritePropertyMultiple) service to write a value for the commandable property, the Present_ Value property for an AO, to a specific slot in a Priority_Array which each commandable property must maintain`. To release the command, a NULL value is written to the same slot in the array. If all the slots contain NULL, the `Relinquish_Default` value is used for the commandable property.
+
+**Properties**:
+1. Priority_Array: the 16 slots array for the AO's Present_Value property
+2. Relinquish_Default: 
+
+#### Analog Value
+`Purpose`: The Analog Value (AV) object type defines a standardized object whose properties represent the `network-visible` characteristics of an analog value. `An analog value is a control system parameter residing in the memory of the BACnet Device`. It can be a setpoint, a calculated value used for control loop tuning, or just about anything else.
+
+The Present_Value of an AV object is a general-purpose `REAL` number that can be used to represent any analog value that needs to be network-visible, that is, shared between devices. It has the same set of properties as the AI and AO object types with four exceptions: the AV object has no Device_Type, Min_Pres_Value, Max_Pres_Value, or Resolution properties since `it is not likely to be associated with a sensor or actuator`. The other major difference is that the Present_Value may, or may not, be commandable so the Priority_Array and Relinquish_ Default properties are optional, not required as they are for the AO object.
+
+#### Binary Input
+Purpose: The `Binary Input (BI)` object type defines a standardized object whose properties represent the network-visible characteristics of a binary input. A “binary input” is a physical device or hardware input that can be in only one of two distinct states, referred to as ACTIVE and INACTIVE. These are the two enumerated values of a BACnetBinaryPV datatype.
+
+A typical use of a BI object is to indicate whether a particular piece of mechanical equipment, such as a fan or pump, is running or stopped.
+
+**Properties**:
+1. Active_Text, Inactive_Text
+2. Change_Of_State_Time:
+3. Change_Of_State_Count:
+4. Time_of_State_Count_Reset:
+5. Elapsed_Active_Time:
+6. Time_of_Active_Time_Reset:
+7. other alarm values
+
+
+#### Binary Output
+`Purpose`: The Binary Output (BO) object type defines a standardized object whose properties represent the network-visible characteristics of a binary output. A “binary output” is a physi - cal device or hardware output that can be in only one of two distinct states. In this description, those states are referred to as ACTIVE and INACTIVE.
+  
+The BO object type is to the BI object type as the AO object type is to the AI object type. It has the same set of properties and, like the AO, the Present_Value is commandable so there are `Priority_Array` and `Relinquish_Default` properties. Three properties are object-specific:
+
+**Properties**
+1. Minimum_Off_Time, Maximum_On_Time: 
+2. Feedbac_Value: This property, of type BACnetBinaryPV, represents a feedback value from which the Present_Value must differ before a TO-OFFNORMAL event is generated.
+3. ...
+
+#### Binary Value
+`Purpose`: The Binary Value (BV) object type defines a standardized object whose properties represent the network-visible characteristics of a binary value. As is the case of the AV object type, the BV is a control system parameter residing in the memory of the BACnet Device. It can be a constant representing some time condition, such as `Holiday=ACTIVE` or some other value representing an input to a control algorithm such as `Load-Shedding=INACTIVE` or it could be the feedback value used by a BO object.
+
+
+#### Loop
+
+`Purpose`: The Loop object type defines a standardized object whose properties represent the network-visible characteristics of any form of feedback control loop.
+
+The `Loop object` type represents a collection of properties, each of which maps to a parameter of a control loop. The specific type of loop is not specified so the object can be applied to just about any kind of closed loop control and, in particular, `proportional-integral-derivative (PID) control`, probably the most common closed-loop control in most BACS applications.
+
+In order to make the Loop object as flexible as possible, the `Setpoint can be a property of another object`. This would be useful, for example, if your Loop object represented the discharge air temperature control of an air handler and you wanted to adjust the Setpoint based on an outside air temperature reset schedule. In this case, `the setpoint would be the Present_Value of an Analog_Value object` and the `Loop`, through its `Setpoint_Reference` property could pick up its Setpoint from this external object.
+
+**Properties**
+1. Update_Interval: Is the interval in milliseconds at which the loop algorithm updates the `output value contained in the Present_Value` property. This may, or may not, be the interval at which the underlying control loop, represented by the Loop object for the purposes of BACnet, actually executes.
+2. Present_Value, Output_Units: The Present_Value is the current output value of the loop algorithm in units of the Output_Units property. This value is written to the property of an external object referenced by the Manipulated_Variable_Reference, typically an Analog_Output object.
+3. Manipulated_Variable_Reference: The output (Present_Value) of the control loop is written to the object and property designated by this property.
+4. Controlled_Variable_Reference : This is the reference to the feedback value, typically the Present_Value of an Analog Input object.
+5. Controlled_Variable_Value, Controlled_Variable_Units: These are the actual feedback values from the Controlled_Variable_Reference and its engineering units. The loop error is calculated by comparing the Controlled_Variable_Value to the Setpoint.
+6. Setpoint_Reference, Setpoint : The Setpoint_Reference points to the object and property containing the Setpoint value for the Loop. If the Setpoint_Reference is empty, the set - point is fixed and contained in the Setpoint property.
+7. Action: Indicates whether the loop represented by the Loop object is DIRECT or REVERSE acting, i.e., whether the output increases with increasing error (DIRECT) or decreases (REVERSE).
+
+----------------------------------------------------------------------
+
+The following are optional peroperties:
+
+8. Proportional_Constant, Proportional_Constant_Units:
+9. Integral_Constant, Integral_Constant_Units : Represents the integral gain parameter and its engineering units. 
+10. Derivative_Constant, Derivative_Constant_Units : Represents the derivative gain parameter and its engineering units. 
+11. Minimum_Output, Maximum_Output : These REAL properties set the minimum and maximum values that the Present_Value can take on based on the underlying control loop algorithm. 
+12. Bias : Sometimes an output signal must be “biased” up or down by a fixed amount to properly control the manipulated hardware, e.g., the valve or damper. This property makes that parameter network-visible. 
+13. Priority_For_Writing : Since Loop objects may be used to set the value of a commandable property of an external object determined by the Manipulated_Variable_Reference, this property determines the priority slot in the object’s Priority_Array that will be written to. 
+14. COV_Increment : Specifies the minimum change in Present_Value that will cause a COVNotification to be issued to subscriber COV-clients and must be present if the particular Loop object supports COV reporting.
+
+![15](figs/15-structure-of-loop.png)
+
+#### Command
+`Purpose`: The Command object type defines a standardized object whose properties represent the network-visible characteristics of a multi-action command procedure. A Command object is used to write a set of values to a group of object properties, based on the “action code” that is written to the Present_Value of the Command object. Whenever the Present_Value property of the Command object is written to, it triggers the Command object to take a set of actions that change the values of a set of other objects’ properties.
+
+#### Load Control
+`Purpose`: The Load Control object provides a mechanism by which an internal or external entity can control electrical loads that are accessible through a BACnet device.
+
+The Load Control object was developed to provide a standardized way that `load shedding could be implemented in BACnet systems` where the determination of how to actually accomplish a particular reduction in load is entirely within the purview of the BACS. As a result, a single BACnet device might have multiple Load Control instances, one for various groupings of sub-loads. One could also conceive of a Load Control hierarchy where one “master” object communicates with the utility and then parcels out the reduction in load to Load Control objects in other devices within a facility.
+
+![16](figs/16-load-object.png)
+
+
+**Properties**
+1. Present_Value: indicates the current load shedding state of the object and can have the values {SHED_INACTIVE, SHED_REQUEST_PENDING, SHED_COMPLI - ANT, SHED_NON_COMPLIANT}.
+2. State_Description:
+3. Enable:
+4. Requested_Shed_Level:
+5. Shed_Levels: This is an array of values, in increasing shed amount that correspond to actions that the Load Control object will take when a Requested_Shed_Level is received.
+6. Full_Duty_Baseline: is an optional property that indicates the baseline load in kW. Shed requests or type PERCENT or AMOUNT relate to this baseline.
+7. Expected_Shed_Level:
+8. Actual_Shed_Level:
+9. Start_Time:
+10. Shed_Duration:
+11. Duty_Window:
+
